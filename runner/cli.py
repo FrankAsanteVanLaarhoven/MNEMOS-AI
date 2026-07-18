@@ -26,6 +26,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--list-adapters", action="store_true", help="list channel adapters and exit")
     ap.add_argument("--send", metavar="ADAPTER", help="deliver the text via a channel adapter")
     ap.add_argument(
+        "--notion-read", metavar="PAGE_ID", help="read a Notion page into text (risk 1)"
+    )
+    ap.add_argument(
         "--plan", action="store_true", help="multi-skill: primary specialist + allowed handoffs"
     )
     args = ap.parse_args(argv)
@@ -46,6 +49,16 @@ def main(argv: list[str] | None = None) -> int:
             tag = "  [third-party: discloses + needs approval]" if a.third_party else ""
             print(f"- {name} (risk {a.risk}){tag}")
         return 0
+
+    if args.notion_read:
+        from runner.notion_read import read_page
+
+        try:
+            print(read_page(args.notion_read)["text"] or "(no text blocks)")
+            return 0
+        except Exception as exc:
+            print(f"[read failed] {exc}")
+            return 3
 
     request = " ".join(args.request).strip()
     if not request:
