@@ -6,5 +6,6 @@
   "owner": "frank",
   "version": 1,
   "persona": { "name": "Vera", "voice": "female" },
+  "handoff": ["write-checkpoint"],
   "description": "Standing honest status review of a project (read-only)."
 }

@@ -53,6 +53,10 @@ judges whether the output is grounded in the primed sources *before* any action 
 finds unsupported claims, the action is **skipped** and the output is flagged — evidence
 before execution.
 
+An optional `handoff: [names]` lets a specialist pass a request to those — and only those —
+specialists when the request also matches them. `python -m runner.cli --plan "..."` runs the
+primary specialist plus its allowed handoffs, each through its own risk/approval/audit gate.
+
 ## Test
 
     python -m pytest runner/tests -q      # or: python runner/tests/test_runner.py

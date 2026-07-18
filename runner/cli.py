@@ -25,6 +25,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--list", action="store_true", help="list specialists and exit")
     ap.add_argument("--list-adapters", action="store_true", help="list channel adapters and exit")
     ap.add_argument("--send", metavar="ADAPTER", help="deliver the text via a channel adapter")
+    ap.add_argument(
+        "--plan", action="store_true", help="multi-skill: primary specialist + allowed handoffs"
+    )
     args = ap.parse_args(argv)
 
     if args.list:
@@ -62,6 +65,29 @@ def main(argv: list[str] | None = None) -> int:
 
     backend = get_backend(args.backend) if args.backend else None
     guard = Guard.from_env()
+
+    if args.plan:
+        from .orchestrator import run_plan
+
+        rc = 0
+        for r in run_plan(
+            request,
+            target_note=args.note,
+            approve=args.yes,
+            signoff=args.signoff,
+            backend=backend,
+            guard=guard,
+        ):
+            if not r.specialist:
+                print(r.note)
+                rc = 2
+                continue
+            print(f"— {r.specialist} (risk {r.risk}) —")
+            if r.output:
+                print(r.output)
+            if r.note:
+                print(f"[{r.note}]")
+        return rc
 
     res = run(
         request,

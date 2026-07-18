@@ -37,3 +37,10 @@ def route(request: str, specialists: list[dict] | None = None) -> dict | None:
     if len(scored) > 1 and scored[0][0] == scored[1][0]:
         return None  # ambiguous -- let the caller disambiguate
     return scored[0][1]
+
+
+def route_all(request: str, specialists: list[dict] | None = None) -> list[dict]:
+    """Every specialist whose triggers match, highest score first (for multi-skill plans)."""
+    specialists = specialists if specialists is not None else load_specialists()
+    scored = sorted(((score(request, s), s) for s in specialists), key=lambda x: x[0], reverse=True)
+    return [s for sc, s in scored if sc > 0]

@@ -18,7 +18,7 @@ from . import audit
 from .actions import ActionContext, has_action, run_action
 from .model import ModelBackend, get_backend
 from .registry import gate_for, load_registry, risk_of
-from .router import route
+from .router import route, route_all
 from .verify import challenge
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -234,3 +234,27 @@ def run(
         verdict=verdict,
         note=warn or "",
     )
+
+
+def run_plan(request: str, **kwargs) -> list[Result]:
+    """Multi-skill: route to the primary specialist, run it, then run any specialist in the
+    primary's explicit `handoff` allow-list that the request also matches. Each step goes
+    through the full risk/approval/audit/verify gate independently.
+    """
+    specialists = kwargs.pop("specialists", None)
+    pool = specialists if specialists is not None else load_registry()
+    matched = route_all(request, pool)
+    if not matched:
+        names = ", ".join(s["name"] for s in pool)
+        return [
+            Result(
+                specialist=None, output="", note=f"no specialist matched; choose one of: {names}"
+            )
+        ]
+    primary = matched[0]
+    results = [run(request, specialists=[primary], **kwargs)]
+    allowed = set(primary.get("handoff", []))
+    for spec in matched[1:]:
+        if spec["name"] in allowed:
+            results.append(run(request, specialists=[spec], **kwargs))
+    return results
