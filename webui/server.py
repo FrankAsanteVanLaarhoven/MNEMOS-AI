@@ -28,12 +28,18 @@ _STATIC = {
 }
 
 
+_HISTORY: list = []
+
+
 def answer(text: str, *, approve: bool = False, backend=None, guard=None) -> dict:
-    res = run(text, approve=approve, backend=backend, guard=guard)
+    res = run(text, approve=approve, backend=backend, guard=guard, history=_HISTORY)
     persona, voice = "Mnemos", "neutral"
     if res.specialist:
         specs = {s["name"]: s for s in load_registry()}
         persona, voice = persona_of(specs.get(res.specialist, {}))
+    if res.output:
+        _HISTORY.append((text, res.output))
+        del _HISTORY[: max(0, len(_HISTORY) - 12)]
     return {
         "specialist": res.specialist,
         "persona": persona,

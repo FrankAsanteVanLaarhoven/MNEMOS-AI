@@ -1,0 +1,11 @@
+{
+  "name": "concierge",
+  "job": "vault/03-jobs/concierge.md",
+  "triggers": [],
+  "risk": 0,
+  "owner": "frank",
+  "version": 1,
+  "persona": { "name": "Mnemos", "voice": "neutral" },
+  "default": true,
+  "description": "Front desk: general conversation, explains capabilities, routes to specialists."
+}

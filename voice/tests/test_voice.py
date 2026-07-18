@@ -47,13 +47,13 @@ def test_high_stakes_declined_when_not_yes(tmp_path):
     assert "[stub]" not in joined  # never ran
 
 
-def test_unmatched_speaks_choices(tmp_path):
+def test_unmatched_routes_to_concierge(tmp_path):
     stt = TextSTT(script=["tell me a joke", "exit"])
     tts = converse(
         stt, TextTTS(echo=False), backend=StubBackend(), audit_dir=tmp_path, action_root=tmp_path
     )
     joined = "\n".join(tts.spoken)
-    assert "no specialist matched" in joined
+    assert "[stub]" in joined  # concierge (default) responds conversationally
 
 
 def _run_all():

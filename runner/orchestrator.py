@@ -62,6 +62,7 @@ def run(
     action_root=None,
     signoff: bool = False,
     verifier_backend: ModelBackend | None = None,
+    history: list | None = None,
 ) -> Result:
     try:
         request = clean_request(request)
@@ -76,6 +77,8 @@ def run(
 
     specialists = specialists if specialists is not None else load_registry()
     spec = route(request, specialists)
+    if spec is None:
+        spec = next((s for s in specialists if s.get("default")), None)
     if spec is None:
         names = ", ".join(s["name"] for s in specialists)
         return Result(
@@ -166,7 +169,12 @@ def run(
             )
 
     backend = backend or get_backend()
-    output = backend.complete(system, request)
+    prompt = request
+    if history:
+        convo = "\n".join(f"User: {u}\nMnemos: {m}" for u, m in history[-6:] if u)
+        if convo:
+            prompt = f"[recent conversation]\n{convo}\n\n[current message] {request}"
+    output = backend.complete(system, prompt)
     if guard is not None:
         guard.add_tokens(estimate_tokens(output))
 
