@@ -1,7 +1,7 @@
-"""Tests for the integration adapters (draft path only; no network, no real accounts).
+"""Tests for the integration adapters (draft path + email parsing; no network, no creds).
 
-The live Notion path (`_create_page`) is exercised manually against a real token, not here.
-Run:  python -m pytest runner/tests/test_integrations.py -q
+The live Notion (`_create_page`) and Gmail (`_send`) paths run against real credentials,
+not here. Run:  python -m pytest runner/tests/test_integrations.py -q
 """
 
 from __future__ import annotations
@@ -13,10 +13,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from runner import adapters  # noqa: E402
+from runner.adapters.integrations import parse_email  # noqa: E402
 
 
 def test_notion_drafts_without_token(tmp_path):
-    # ensure the live path can't trigger even if a real .env was sourced
     saved = {
         k: os.environ.pop(k, None) for k in ("MNEMOS_NOTION_TOKEN", "MNEMOS_NOTION_PARENT_PAGE")
     }
@@ -25,9 +25,7 @@ def test_notion_drafts_without_token(tmp_path):
         r = adapters.send("notion", "a page body", approve=True, root=tmp_path, audit_dir=tmp_path)
         assert r.delivered
         body = (tmp_path / r.written[0]).read_text()
-        assert "DRAFT for notion" in body
-        assert "me@example.com" in body
-        assert "NOT sent/posted" in body
+        assert "DRAFT for notion" in body and "me@example.com" in body and "NOT sent/posted" in body
     finally:
         os.environ.pop("MNEMOS_NOTION_ACCOUNT", None)
         for k, v in saved.items():
@@ -45,12 +43,31 @@ def test_slack_third_party_blocked_without_approval(tmp_path):
     assert not r.delivered and "approval" in r.note
 
 
-def test_gmail_discloses_and_drafts_with_approval(tmp_path):
-    r = adapters.send("gmail", "Dear client", approve=True, root=tmp_path, audit_dir=tmp_path)
-    assert r.delivered
-    body = (tmp_path / r.written[0]).read_text()
-    assert "automated assistant" in body  # disclosure prepended
-    assert "NOT sent/posted" in body  # never actually sent
+def test_gmail_drafts_without_credentials(tmp_path):
+    saved = os.environ.pop("MNEMOS_GMAIL_APP_PASSWORD", None)
+    os.environ["MNEMOS_GMAIL_ACCOUNT"] = "me@example.com"
+    try:
+        r = adapters.send("gmail", "Dear client", approve=True, root=tmp_path, audit_dir=tmp_path)
+        assert r.delivered
+        body = (tmp_path / r.written[0]).read_text()
+        assert "automated assistant" in body  # disclosure prepended
+        assert "NOT sent/posted" in body  # never actually sent
+    finally:
+        os.environ.pop("MNEMOS_GMAIL_ACCOUNT", None)
+        if saved is not None:
+            os.environ["MNEMOS_GMAIL_APP_PASSWORD"] = saved
+
+
+def test_parse_email_defaults_to_self():
+    to, subject, body = parse_email("just a body line", "me@x.com")
+    assert to == "me@x.com" and subject == "Mnemos message" and body == "just a body line"
+
+
+def test_parse_email_extracts_to_and_subject():
+    payload = "Disclosure line\n\nTo: bob@x.com\nSubject: Hi Bob\n\nBody here"
+    to, subject, body = parse_email(payload, "me@x.com")
+    assert to == "bob@x.com" and subject == "Hi Bob"
+    assert "Body here" in body and "Disclosure line" in body and "To:" not in body
 
 
 def _run_all():

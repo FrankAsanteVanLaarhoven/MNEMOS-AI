@@ -20,7 +20,7 @@ channels that reach other people.
 | `email`  | 3 | yes | writes a **draft** to `outbox/email-*.md`, disclosure prepended, for you to review and send yourself — **it does not send** |
 | `notion` | 3 | no  | **live**: creates a page via the Notion API when `MNEMOS_NOTION_TOKEN` + `MNEMOS_NOTION_PARENT_PAGE` are set (approval-gated); otherwise drafts to `outbox/notion-*.md` |
 | `slack`  | 3 | yes | drafts a message to `outbox/slack-*.md`, targeting `MNEMOS_SLACK_ACCOUNT`, disclosure prepended — **does not post** |
-| `gmail`  | 3 | yes | drafts an email to `outbox/gmail-*.md`, targeting `MNEMOS_GMAIL_ACCOUNT`, disclosure prepended — **does not send** |
+| `gmail`  | 3 | yes | **live**: sends via Google SMTP when `MNEMOS_GMAIL_ACCOUNT` + `MNEMOS_GMAIL_APP_PASSWORD` are set (optional `To:`/`Subject:` lines; defaults to self), disclosure prepended, approval-gated; otherwise drafts to `outbox/gmail-*.md` |
 
 `notion` is **live** once `MNEMOS_NOTION_TOKEN` + `MNEMOS_NOTION_PARENT_PAGE` are set (a real
 page create via the Notion API, still approval-gated + audited); without them it drafts
