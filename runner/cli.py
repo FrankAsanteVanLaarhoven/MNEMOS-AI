@@ -23,6 +23,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--yes", action="store_true", help="approve risk 3-5 actions")
     ap.add_argument("--signoff", action="store_true", help="professional sign-off for risk 5")
     ap.add_argument("--list", action="store_true", help="list specialists and exit")
+    ap.add_argument("--list-adapters", action="store_true", help="list channel adapters and exit")
+    ap.add_argument("--send", metavar="ADAPTER", help="deliver the text via a channel adapter")
     args = ap.parse_args(argv)
 
     if args.list:
@@ -33,9 +35,28 @@ def main(argv: list[str] | None = None) -> int:
             )
         return 0
 
+    if args.list_adapters:
+        from runner import adapters
+
+        for name in adapters.names():
+            a = adapters.get(name)
+            tag = "  [third-party: discloses + needs approval]" if a.third_party else ""
+            print(f"- {name} (risk {a.risk}){tag}")
+        return 0
+
     request = " ".join(args.request).strip()
     if not request:
         ap.error("no request given")
+
+    if args.send:
+        from runner import adapters
+
+        r = adapters.send(args.send, request, approve=args.yes, signoff=args.signoff)
+        if r.delivered:
+            print(f"delivered via {r.adapter}: {', '.join(r.written)}")
+            return 0
+        print(f"[not delivered] {r.note}")
+        return 3
 
     from .model import get_backend
 

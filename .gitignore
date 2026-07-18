@@ -22,3 +22,6 @@ __pycache__/
 
 # local engine wrappers (engine-specific; kept out of the sovereign repo)
 /local/
+
+# outbound drafts prepared by channel adapters (may contain PII; review before sending)
+/outbox/
