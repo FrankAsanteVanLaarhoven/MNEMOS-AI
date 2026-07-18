@@ -169,6 +169,9 @@ def run(
             )
 
     backend = backend or get_backend()
+    spec_model = spec.get("model")
+    if spec_model and getattr(backend, "name", "") == "http":
+        backend = get_backend("http", model=spec_model)
     prompt = request
     if history:
         convo = "\n".join(f"User: {u}\nMnemos: {m}" for u, m in history[-6:] if u)

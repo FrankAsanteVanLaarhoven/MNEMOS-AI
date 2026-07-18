@@ -42,9 +42,9 @@ class HttpChatBackend(ModelBackend):
 
     name = "http"
 
-    def __init__(self) -> None:
+    def __init__(self, model: str | None = None) -> None:
         self.base = os.environ.get("MNEMOS_MODEL_BASE_URL", "http://localhost:11434/v1")
-        self.model = os.environ.get("MNEMOS_MODEL_NAME", "local")
+        self.model = model or os.environ.get("MNEMOS_MODEL_NAME", "local")
         self.key = os.environ.get("MNEMOS_MODEL_API_KEY", "")
         self.timeout = float(os.environ.get("MNEMOS_MODEL_TIMEOUT", "600"))
 
@@ -70,10 +70,10 @@ class HttpChatBackend(ModelBackend):
         return data["choices"][0]["message"]["content"]
 
 
-def get_backend(name: str | None = None) -> ModelBackend:
+def get_backend(name: str | None = None, model: str | None = None) -> ModelBackend:
     name = name or os.environ.get("MNEMOS_MODEL_BACKEND", "stub")
     if name == "stub":
         return StubBackend()
     if name in ("http", "chat"):
-        return HttpChatBackend()
+        return HttpChatBackend(model=model)
     raise ValueError(f"unknown model backend: {name!r}")
