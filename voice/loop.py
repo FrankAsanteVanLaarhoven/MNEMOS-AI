@@ -8,6 +8,7 @@ is announced and proceeds only on a spoken 'yes'.
 from __future__ import annotations
 
 from runner.orchestrator import run
+from runner.registry import load_registry, persona_of
 
 from .stt import SpeechToText, TextSTT
 from .tts import TextToSpeech, TextTTS
@@ -29,10 +30,22 @@ def converse(
 ) -> TextToSpeech:
     stt = stt or TextSTT()
     tts = tts or TextTTS()
+    specs = {s["name"]: s for s in load_registry()}
+    acting = {"persona": None}
 
     def state(s):
         if viz is not None:
             viz(s)
+
+    def speak(text, specialist=None):
+        if not specialist:
+            tts.say(text)
+            return
+        name, voice = persona_of(specs.get(specialist, {}))
+        if name != acting["persona"]:
+            tts.say(f"This is {name}.", voice=voice)
+            acting["persona"] = name
+        tts.say(text, voice=voice)
 
     turns = 0
     state("idle")
@@ -58,7 +71,7 @@ def converse(
             continue
         if res.escalated or res.risk >= 5:
             state("speaking")
-            tts.say(res.note)
+            speak(res.note, res.specialist)
             state("idle")
             continue
         if res.approved is False and not res.ran:
@@ -82,7 +95,7 @@ def converse(
                 state("idle")
                 continue
         state("speaking")
-        tts.say(res.output)
+        speak(res.output, res.specialist)
         if res.sources:
             tts.say("Sources: " + ", ".join(res.sources))
         if res.note:

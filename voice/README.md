@@ -24,6 +24,18 @@ All three layers are swappable and default to something that runs with no hardwa
 Mnemos declares no specific audio engine — you point the command backends at whatever
 local ASR/TTS you run. The command backends are wiring only and are not covered by tests.
 
+## Personas & voice
+
+Each specialist can declare an assistant `persona` — a display name and a `voice`
+(`male` / `female` / `neutral`). When a specialist acts, the loop announces it ("This is
+Vera.") and asks the TTS backend to use that voice; `CommandTTS` passes the choice to your
+engine as the `MNEMOS_TTS_VOICE` environment variable, so your wrapper can select a male or
+female voice.
+
+A persona is an **assistant identity, not an impersonation of a specific real person**. It
+self-identifies as an assistant and must not be used to make a third party believe they are
+speaking to a particular real human.
+
 ## Test
 
     python -m pytest voice/tests -q      # or: python voice/tests/test_voice.py

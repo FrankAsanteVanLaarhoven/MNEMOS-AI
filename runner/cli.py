@@ -11,7 +11,7 @@ import argparse
 from security.limits import Guard
 
 from .orchestrator import run
-from .registry import risk_of
+from .registry import persona_of, risk_of
 from .router import load_specialists
 
 
@@ -27,7 +27,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.list:
         for s in load_specialists():
-            print(f"- {s['name']} (risk {risk_of(s)}): {s.get('description', '')}")
+            persona, voice = persona_of(s)
+            print(
+                f"- {s['name']} (risk {risk_of(s)}, {persona}/{voice}): {s.get('description', '')}"
+            )
         return 0
 
     request = " ".join(args.request).strip()

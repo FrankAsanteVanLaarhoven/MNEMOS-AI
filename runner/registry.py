@@ -59,3 +59,11 @@ def load_registry(spec_dir=None) -> list[dict]:
             raise ValueError(f"duplicate specialist name: {s['name']}")
         seen.add(s["name"])
     return specs
+
+
+def persona_of(spec: dict) -> tuple[str, str]:
+    """The acting persona for a specialist: (display name, voice). Defaults to the Mnemos
+    assistant identity with a neutral voice. A persona is an assistant identity, not an
+    impersonation of a specific real person."""
+    p = spec.get("persona") or {}
+    return p.get("name", "Mnemos"), p.get("voice", "neutral")

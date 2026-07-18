@@ -6,5 +6,6 @@
   "risk": 3,
   "owner": "frank",
   "version": 1,
+  "persona": { "name": "Cass", "voice": "male" },
   "description": "Write a compact resume-able checkpoint (writes to the vault)."
 }

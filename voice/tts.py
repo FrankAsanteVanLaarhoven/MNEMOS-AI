@@ -14,7 +14,7 @@ import subprocess
 
 
 class TextToSpeech:
-    def say(self, text: str) -> None:
+    def say(self, text: str, voice: str | None = None) -> None:
         raise NotImplementedError
 
 
@@ -25,10 +25,11 @@ class TextTTS(TextToSpeech):
         self.spoken: list[str] = []
         self._echo = echo
 
-    def say(self, text: str) -> None:
+    def say(self, text: str, voice: str | None = None) -> None:
         self.spoken.append(text)
         if self._echo:
-            print(f"mnemos> {text}")
+            tag = f"({voice}) " if voice and voice != "neutral" else ""
+            print(f"mnemos> {tag}{text}")
 
 
 class CommandTTS(TextToSpeech):
@@ -39,5 +40,8 @@ class CommandTTS(TextToSpeech):
         if not self._cmd:
             raise RuntimeError("CommandTTS needs env MNEMOS_TTS_CMD (a local TTS CLI)")
 
-    def say(self, text: str) -> None:  # pragma: no cover
-        subprocess.run(shlex.split(self._cmd), input=text, text=True, timeout=120)
+    def say(self, text: str, voice: str | None = None) -> None:  # pragma: no cover
+        env = dict(os.environ)
+        if voice:
+            env["MNEMOS_TTS_VOICE"] = voice
+        subprocess.run(shlex.split(self._cmd), input=text, text=True, timeout=120, env=env)
