@@ -1,0 +1,21 @@
+{
+  "name": "decision",
+  "job": "vault/03-jobs/decision.md",
+  "triggers": [
+    "decide",
+    "decision",
+    "options",
+    "recommend",
+    "prioritise",
+    "prioritize",
+    "next best action",
+    "what should i do",
+    "trade-off",
+    "tradeoff"
+  ],
+  "risk": 1,
+  "owner": "frank",
+  "version": 1,
+  "persona": { "name": "Atlas", "voice": "male" },
+  "description": "Governed decisioning: ranked next-best-actions with evidence, risk level, and required approval."
+}
