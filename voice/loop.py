@@ -25,6 +25,7 @@ def converse(
     audit_dir=None,
     guard=None,
     viz=None,
+    action_root=None,
 ) -> TextToSpeech:
     stt = stt or TextSTT()
     tts = tts or TextTTS()
@@ -49,7 +50,7 @@ def converse(
             break
         turns += 1
         state("thinking")
-        res = run(text, backend=backend, audit_dir=audit_dir, guard=guard)
+        res = run(text, backend=backend, audit_dir=audit_dir, guard=guard, action_root=action_root)
         if res.specialist is None:
             state("speaking")
             tts.say(res.note)
@@ -62,7 +63,14 @@ def converse(
             reply = (stt.listen() or "").strip().lower()
             if reply in _YES:
                 state("thinking")
-                res = run(text, approve=True, backend=backend, audit_dir=audit_dir, guard=guard)
+                res = run(
+                    text,
+                    approve=True,
+                    backend=backend,
+                    audit_dir=audit_dir,
+                    guard=guard,
+                    action_root=action_root,
+                )
             else:
                 state("speaking")
                 tts.say(f"Skipped {res.specialist}.")

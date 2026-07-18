@@ -73,6 +73,7 @@ def test_high_stakes_runs_with_approval(tmp_path):
         backend=StubBackend(),
         specialists=SPECS,
         audit_dir=tmp_path,
+        action_root=tmp_path,
     )
     assert res.ran and res.approved is True
 

@@ -15,6 +15,7 @@ from security.limits import BudgetExceeded, Guard, RateExceeded, estimate_tokens
 from security.validate import InvalidInput, clean_request
 
 from . import audit
+from .actions import ActionContext, has_action, run_action
 from .model import ModelBackend, get_backend
 from .router import load_specialists, route
 
@@ -53,6 +54,7 @@ def run(
     specialists: list[dict] | None = None,
     audit_dir=None,
     guard: Guard | None = None,
+    action_root=None,
 ) -> Result:
     try:
         request = clean_request(request)
@@ -112,6 +114,21 @@ def run(
     output = backend.complete(system, request)
     if guard is not None:
         guard.add_tokens(estimate_tokens(output))
+
+    action_name = spec.get("action")
+    if has_action(action_name):
+        result = run_action(
+            action_name,
+            ActionContext(
+                root=Path(action_root) if action_root else ROOT,
+                request=request,
+                output=output,
+                target_note=target_note,
+            ),
+        )
+        sources = sources + result.written
+        output = f"{output}\n\n({result.message})"
+
     audit.record(
         "ran",
         spec["name"],

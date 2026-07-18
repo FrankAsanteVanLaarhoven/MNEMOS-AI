@@ -37,6 +37,11 @@ Set `MNEMOS_MODEL_BACKEND`:
 One JSON file per specialist: `name`, `job` (path to a priming note), `triggers`,
 `high_stakes`, `description`. Add a specialist by dropping in a new file — no code change.
 
+An optional `action` names a vault side-effect: after the model produces its text, the
+action persists it. `write-checkpoint` appends the result to today's daily log (and leaves
+a dated pointer in a `--note` project note). Actions are appends only, run **after** the
+high-stakes approval gate, and their written paths are recorded in the audit trail.
+
 ## Test
 
     python -m pytest runner/tests -q      # or: python runner/tests/test_runner.py
