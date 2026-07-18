@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mnemos</title>
+<style>
+  :root { --bg:#05070d; --fg:#cfe3ee; --dim:#6f93a6; --accent:#46b6dc; }
+  * { margin:0; box-sizing:border-box; }
+  html, body { height:100%; }
+  body {
+    background:var(--bg); color:var(--fg); overflow-x:hidden;
+    font:15px/1.5 ui-monospace, Menlo, Consolas, monospace;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  header { text-align:center; margin:28px 0 8px; }
+  header h1 { font-size:16px; letter-spacing:.4em; text-transform:uppercase; color:var(--accent); font-weight:600; }
+  header small { color:var(--dim); letter-spacing:.15em; }
+  #orb {
+    width:120px; height:120px; margin:18px 0; border-radius:50%;
+    background:radial-gradient(circle at 50% 45%, var(--accent), transparent 70%);
+    opacity:.35; transition:opacity .2s, transform .2s;
+  }
+  #orb.listening { opacity:.9; transform:scale(1.08); }
+  #orb.thinking  { opacity:.7; animation:pulse .8s ease-in-out infinite; }
+  #orb.speaking  { opacity:1; animation:pulse .5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+  #status { color:var(--dim); min-height:1.4em; letter-spacing:.1em; }
+  .row { display:flex; gap:8px; width:min(680px, 92vw); margin-top:10px; }
+  #q { flex:1; background:#0b1018; border:1px solid #1e2b36; color:var(--fg);
+       padding:10px 12px; border-radius:8px; font:inherit; }
+  button { background:#12202b; border:1px solid #24404f; color:var(--fg);
+           padding:10px 14px; border-radius:8px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  #mic.on { background:var(--accent); color:#05070d; border-color:var(--accent); }
+  #log { width:min(680px, 92vw); margin:18px 0 40px; }
+  .turn { border-left:2px solid #1e2b36; padding:6px 0 10px 12px; margin:10px 0; }
+  .you { color:var(--dim); }
+  .who { color:var(--accent); letter-spacing:.1em; }
+  .flag { color:#e0b050; }
+  .ev { color:var(--dim); font-size:12px; }
+  .approve { margin-top:6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mnemos</h1>
+  <small>local voice · type or hold the mic · nothing leaves this machine</small>
+</header>
+<div id="orb"></div>
+<div id="status">ready</div>
+<div class="row">
+  <input id="q" placeholder="type a request, or press the mic…" autocomplete="off" />
+  <button id="mic" title="hold to talk">🎙</button>
+  <button id="go">Send</button>
+</div>
+<div id="log"></div>
+
+<script>
+const orb = document.getElementById('orb');
+const statusEl = document.getElementById('status');
+const q = document.getElementById('q');
+const micBtn = document.getElementById('mic');
+const log = document.getElementById('log');
+
+function setState(s, msg) {
+  orb.className = s === 'idle' ? '' : s;
+  if (msg !== undefined) statusEl.textContent = msg;
+}
+
+// --- text to speech (browser), pick a voice by the persona's gender ---
+function pickVoice(gender) {
+  const vs = speechSynthesis.getVoices();
+  const en = vs.filter(v => /^en/i.test(v.lang));
+  const pool = en.length ? en : vs;
+  const want = gender === 'male'
+    ? /male|david|daniel|fred|alex|rishi|george/i
+    : gender === 'female'
+      ? /female|samantha|zira|victoria|karen|tessa|amy|serena|moira/i
+      : null;
+  if (want) { const m = pool.find(v => want.test(v.name)); if (m) return m; }
+  return pool[0] || null;
+}
+function speak(text, gender) {
+  if (!('speechSynthesis' in window) || !text) return;
+  const u = new SpeechSynthesisUtterance(text);
+  const v = pickVoice(gender); if (v) u.voice = v;
+  u.onstart = () => setState('speaking');
+  u.onend = () => setState('idle', 'ready');
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+
+// --- render one turn ---
+function addTurn(text, d) {
+  const el = document.createElement('div');
+  el.className = 'turn';
+  const who = d.specialist ? `${d.persona} · ${d.specialist} · risk ${d.risk}` : 'Mnemos';
+  let html = `<div class="you">you: ${escapeHtml(text)}</div>`;
+  html += `<div class="who">${escapeHtml(who)}</div>`;
+  if (d.output) html += `<div>${escapeHtml(d.output)}</div>`;
+  if (d.note) html += `<div class="flag">[${escapeHtml(d.note)}]</div>`;
+  if (d.sources && d.sources.length) html += `<div class="ev">sources: ${escapeHtml(d.sources.join(', '))}</div>`;
+  el.innerHTML = html;
+  if (d.specialist && d.approved === false && !d.ran && !d.escalated) {
+    const b = document.createElement('button');
+    b.className = 'approve'; b.textContent = `Approve (risk ${d.risk})`;
+    b.onclick = () => { b.disabled = true; ask(text, true); };
+    el.appendChild(b);
+  }
+  log.prepend(el);
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// --- ask the local server ---
+async function ask(text, approve) {
+  text = (text || '').trim(); if (!text) return;
+  setState('thinking', 'thinking…');
+  try {
+    const r = await fetch('/ask', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, approve: !!approve })
+    });
+    const d = await r.json();
+    addTurn(text, d);
+    if (d.output) speak(d.output, d.voice); else setState('idle', 'ready');
+  } catch (e) {
+    setState('idle', 'error contacting Mnemos');
+  }
+}
+
+document.getElementById('go').onclick = () => { ask(q.value); q.value = ''; };
+q.addEventListener('keydown', e => { if (e.key === 'Enter') { ask(q.value); q.value = ''; } });
+
+// --- speech to text (browser), if available ---
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+micBtn.onclick = () => {
+  if (!SR) { setState('idle', 'speech recognition not supported here — type instead'); return; }
+  if (listening) { rec && rec.stop(); return; }
+  rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
+  rec.onresult = e => { const t = e.results[0][0].transcript; q.value = t; ask(t); };
+  rec.onend = () => { listening = false; micBtn.classList.remove('on'); if (orb.className === 'listening') setState('idle', 'ready'); };
+  rec.onerror = () => { listening = false; micBtn.classList.remove('on'); setState('idle', 'mic error'); };
+  listening = true; micBtn.classList.add('on'); setState('listening', 'listening…'); rec.start();
+};
+</script>
+</body>
+</html>
