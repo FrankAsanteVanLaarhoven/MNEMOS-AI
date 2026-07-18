@@ -42,8 +42,12 @@ class Result:
 
 
 def prime(spec: dict, target_note: str | None = None) -> tuple[str, list[str]]:
-    sources = ["core/boot.md", "vault/INDEX.md", spec["job"]]
-    parts = [_read("core/boot.md"), _read("vault/INDEX.md"), _read(spec["job"])]
+    if spec.get("light"):
+        sources = [spec["job"]]
+        parts = [_read(spec["job"])]
+    else:
+        sources = ["core/boot.md", "vault/INDEX.md", spec["job"]]
+        parts = [_read("core/boot.md"), _read("vault/INDEX.md"), _read(spec["job"])]
     if target_note:
         parts.append(_read(target_note))
         sources.append(target_note)

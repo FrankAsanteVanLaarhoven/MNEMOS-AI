@@ -40,6 +40,13 @@ def test_prime_includes_core_job_and_note():
     assert "Locked rules" in system  # boot content was actually read
 
 
+def test_prime_light_is_job_note_only():
+    spec = {"name": "c", "job": "vault/03-jobs/concierge.md", "light": True}
+    system, sources = prime(spec)
+    assert sources == ["vault/03-jobs/concierge.md"]
+    assert "core/boot.md" not in sources and "vault/INDEX.md" not in sources
+
+
 def test_low_stakes_runs_and_audits(tmp_path):
     res = run(
         "scan governance status",
