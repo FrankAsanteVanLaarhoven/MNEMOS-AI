@@ -1,8 +1,9 @@
 """Text front-end for Mnemos. Run from the repo root:
 
-    python -m runner.cli "scan the status of a project" --note vault/02-projects/EXAMPLE.md
-    python -m runner.cli --list
+python -m runner.cli "scan the status of a project" --note vault/02-projects/EXAMPLE.md
+python -m runner.cli --list
 """
+
 from __future__ import annotations
 
 import argparse

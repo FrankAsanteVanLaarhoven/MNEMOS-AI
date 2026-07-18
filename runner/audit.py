@@ -4,10 +4,11 @@ One line per action, each carrying the evidence sources it used. High-stakes act
 also record the approval decision. Logs live under audit/ and are gitignored -- the
 audit trail is local, never published.
 """
+
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,7 +27,7 @@ def record(
 ) -> dict:
     audit_dir = Path(audit_dir) if audit_dir else DEFAULT_AUDIT_DIR
     audit_dir.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     entry = {
         "ts": now.isoformat(),
         "action": action,

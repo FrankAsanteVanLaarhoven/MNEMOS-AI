@@ -5,6 +5,7 @@ specialist. Each specialist config declares trigger words; the request is scored
 many whole-word triggers it hits, highest score wins. A tie or zero hits returns None so
 the caller can ask which specialist to use.
 """
+
 from __future__ import annotations
 
 import json
@@ -30,9 +31,7 @@ def score(request: str, spec: dict) -> int:
 
 def route(request: str, specialists: list[dict] | None = None) -> dict | None:
     specialists = specialists if specialists is not None else load_specialists()
-    scored = sorted(
-        ((score(request, s), s) for s in specialists), key=lambda x: x[0], reverse=True
-    )
+    scored = sorted(((score(request, s), s) for s in specialists), key=lambda x: x[0], reverse=True)
     if not scored or scored[0][0] == 0:
         return None
     if len(scored) > 1 and scored[0][0] == scored[1][0]:

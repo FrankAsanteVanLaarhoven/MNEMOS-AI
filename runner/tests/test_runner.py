@@ -2,6 +2,7 @@
 
 Run:  python -m pytest runner/tests -q    (or)    python runner/tests/test_runner.py
 """
+
 from __future__ import annotations
 
 import json
@@ -41,8 +42,11 @@ def test_prime_includes_core_job_and_note():
 
 def test_low_stakes_runs_and_audits(tmp_path):
     res = run(
-        "scan governance status", target_note="vault/02-projects/EXAMPLE.md",
-        backend=StubBackend(), specialists=SPECS, audit_dir=tmp_path,
+        "scan governance status",
+        target_note="vault/02-projects/EXAMPLE.md",
+        backend=StubBackend(),
+        specialists=SPECS,
+        audit_dir=tmp_path,
     )
     assert res.ran and res.specialist == "governance-scan"
     assert res.output.startswith("[stub]")
@@ -64,8 +68,11 @@ def test_high_stakes_blocked_without_approval(tmp_path):
 
 def test_high_stakes_runs_with_approval(tmp_path):
     res = run(
-        "write a checkpoint", approve=True, backend=StubBackend(),
-        specialists=SPECS, audit_dir=tmp_path,
+        "write a checkpoint",
+        approve=True,
+        backend=StubBackend(),
+        specialists=SPECS,
+        audit_dir=tmp_path,
     )
     assert res.ran and res.approved is True
 

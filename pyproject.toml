@@ -1,0 +1,21 @@
+[project]
+name = "mnemos"
+version = "0.2.0"
+description = "Sovereign, local-first memory + concierge orchestrator."
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"*/tests/*" = ["E402"]
+"**/__main__.py" = ["E402"]
+"voice/loop.py" = ["E402"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]

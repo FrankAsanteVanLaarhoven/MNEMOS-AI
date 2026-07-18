@@ -9,7 +9,9 @@ Env:
   MNEMOS_MODEL_BASE_URL  e.g. http://localhost:11434/v1
   MNEMOS_MODEL_NAME      model id to request
   MNEMOS_MODEL_API_KEY   optional bearer token (hosted endpoints)
+  MNEMOS_MODEL_TIMEOUT   request timeout in seconds (default: 600; cold loads are slow)
 """
+
 from __future__ import annotations
 
 import json
@@ -44,6 +46,7 @@ class HttpChatBackend(ModelBackend):
         self.base = os.environ.get("MNEMOS_MODEL_BASE_URL", "http://localhost:11434/v1")
         self.model = os.environ.get("MNEMOS_MODEL_NAME", "local")
         self.key = os.environ.get("MNEMOS_MODEL_API_KEY", "")
+        self.timeout = float(os.environ.get("MNEMOS_MODEL_TIMEOUT", "600"))
 
     def complete(self, system: str, prompt: str) -> str:
         body = json.dumps(
@@ -62,7 +65,7 @@ class HttpChatBackend(ModelBackend):
         req = urllib.request.Request(
             self.base.rstrip("/") + "/chat/completions", data=body, headers=headers
         )
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
             data = json.load(resp)
         return data["choices"][0]["message"]["content"]
 

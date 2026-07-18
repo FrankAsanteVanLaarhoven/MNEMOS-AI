@@ -4,6 +4,7 @@ Follows the boot contract: read core/boot.md + vault/INDEX.md + the specialist's
 note (+ any target project note) before acting, cite those sources, and record the
 action. High-stakes specialists require explicit approval before they run.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -53,18 +54,26 @@ def run(
     if spec is None:
         names = ", ".join(s["name"] for s in specialists)
         return Result(
-            specialist=None, output="",
+            specialist=None,
+            output="",
             note=f"no specialist matched; choose one of: {names}",
         )
 
     high = bool(spec.get("high_stakes"))
     if high and not approve:
         audit.record(
-            "blocked-awaiting-approval", spec["name"], [spec["job"]],
-            high_stakes=True, approved=False, audit_dir=audit_dir,
+            "blocked-awaiting-approval",
+            spec["name"],
+            [spec["job"]],
+            high_stakes=True,
+            approved=False,
+            audit_dir=audit_dir,
         )
         return Result(
-            specialist=spec["name"], output="", approved=False, ran=False,
+            specialist=spec["name"],
+            output="",
+            approved=False,
+            ran=False,
             note="high-stakes action requires approval (pass --yes / approve=True)",
         )
 
@@ -72,10 +81,18 @@ def run(
     backend = backend or get_backend()
     output = backend.complete(system, request)
     audit.record(
-        "ran", spec["name"], sources, high_stakes=high,
-        approved=(True if high else None), output_preview=output, audit_dir=audit_dir,
+        "ran",
+        spec["name"],
+        sources,
+        high_stakes=high,
+        approved=(True if high else None),
+        output_preview=output,
+        audit_dir=audit_dir,
     )
     return Result(
-        specialist=spec["name"], output=output, sources=sources,
-        approved=(True if high else None), ran=True,
+        specialist=spec["name"],
+        output=output,
+        sources=sources,
+        approved=(True if high else None),
+        ran=True,
     )
