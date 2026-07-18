@@ -1,0 +1,21 @@
+# runtime, never committed
+/audit/*.jsonl
+
+# private memory — real notes stay local; only EXAMPLE is public
+/vault/02-projects/*.md
+!/vault/02-projects/EXAMPLE.md
+/vault/01-daily/*.md
+
+# secrets / env
+.env
+*.env
+
+# python
+__pycache__/
+*.pyc
+
+# voice / model caches
+/voice/models/
+*.wav
+*.pt
+*.bin
