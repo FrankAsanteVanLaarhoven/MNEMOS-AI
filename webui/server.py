@@ -18,7 +18,14 @@ from runner.orchestrator import run
 from runner.registry import load_registry, persona_of
 from security.limits import Guard
 
-_HTML = (Path(__file__).parent / "index.html").read_bytes()
+_DIR = Path(__file__).parent
+_HTML = (_DIR / "index.html").read_bytes()
+_STATIC = {
+    "/manifest.webmanifest": ("manifest.webmanifest", "application/manifest+json"),
+    "/sw.js": ("sw.js", "application/javascript"),
+    "/icon-192.png": ("icon-192.png", "image/png"),
+    "/icon-512.png": ("icon-512.png", "image/png"),
+}
 
 
 def answer(text: str, *, approve: bool = False, backend=None, guard=None) -> dict:
@@ -55,6 +62,9 @@ class _Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in ("/", "/index.html"):
             self._send(200, "text/html; charset=utf-8", _HTML)
+        elif self.path in _STATIC:
+            fname, ctype = _STATIC[self.path]
+            self._send(200, ctype, (_DIR / fname).read_bytes())
         else:
             self._send(404, "text/plain", b"not found")
 

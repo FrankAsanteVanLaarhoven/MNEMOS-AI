@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#05070d" />
+<link rel="apple-touch-icon" href="/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Mnemos" />
 <title>Mnemos</title>
 <style>
   :root { --bg:#05070d; --fg:#cfe3ee; --dim:#6f93a6; --accent:#46b6dc; }
@@ -143,6 +148,9 @@ micBtn.onclick = () => {
   rec.onerror = () => { listening = false; micBtn.classList.remove('on'); setState('idle', 'mic error'); };
   listening = true; micBtn.classList.add('on'); setState('listening', 'listening…'); rec.start();
 };
+</script>
+<script>
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 </script>
 </body>
 </html>

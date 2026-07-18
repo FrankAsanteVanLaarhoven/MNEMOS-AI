@@ -32,6 +32,14 @@ def test_server_serves_page_and_ask_binds_localhost():
     try:
         html = urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5).read().decode()
         assert "mic" in html.lower() and "speechSynthesis" in html
+        assert "manifest.webmanifest" in html  # PWA wired
+
+        mani = (
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/manifest.webmanifest", timeout=5)
+            .read()
+            .decode()
+        )
+        assert '"name": "Mnemos"' in mani
 
         req = urllib.request.Request(
             f"http://127.0.0.1:{port}/ask",
