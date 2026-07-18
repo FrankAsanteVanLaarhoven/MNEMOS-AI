@@ -1,0 +1,7 @@
+{
+  "name": "governance-scan",
+  "job": "vault/03-jobs/governance-scan.md",
+  "triggers": ["scan", "status", "review", "governance", "audit"],
+  "high_stakes": false,
+  "description": "Standing honest status review of a project (read-only)."
+}
