@@ -56,9 +56,14 @@ def converse(
             tts.say(res.note)
             state("idle")
             continue
+        if res.escalated or res.risk >= 5:
+            state("speaking")
+            tts.say(res.note)
+            state("idle")
+            continue
         if res.approved is False and not res.ran:
             state("speaking")
-            tts.say(f"{res.specialist} is a high-stakes action. Say yes to proceed.")
+            tts.say(f"{res.specialist} is a risk {res.risk} action. Say yes to proceed.")
             state("listening")
             reply = (stt.listen() or "").strip().lower()
             if reply in _YES:

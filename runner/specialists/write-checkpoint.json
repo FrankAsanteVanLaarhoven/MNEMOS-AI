@@ -3,6 +3,8 @@
   "job": "vault/03-jobs/write-checkpoint.md",
   "triggers": ["checkpoint", "resume", "handoff"],
   "action": "write-checkpoint",
-  "high_stakes": true,
+  "risk": 3,
+  "owner": "frank",
+  "version": 1,
   "description": "Write a compact resume-able checkpoint (writes to the vault)."
 }

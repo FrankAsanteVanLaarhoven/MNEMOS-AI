@@ -33,7 +33,7 @@ def test_high_stakes_requires_spoken_yes(tmp_path):
         stt, TextTTS(echo=False), backend=StubBackend(), audit_dir=tmp_path, action_root=tmp_path
     )
     joined = "\n".join(tts.spoken)
-    assert "high-stakes action" in joined
+    assert "Say yes to proceed" in joined
     assert "[stub]" in joined  # ran after spoken approval
 
 

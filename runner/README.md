@@ -35,7 +35,13 @@ Set `MNEMOS_MODEL_BACKEND`:
 ## Specialists (`specialists/*.json`)
 
 One JSON file per specialist: `name`, `job` (path to a priming note), `triggers`,
-`high_stakes`, `description`. Add a specialist by dropping in a new file — no code change.
+`risk` (0-6), `description`, plus optional `owner` / `version` / `boundary` / `action`.
+Add a specialist by dropping in a new file — no code change; the registry validates it.
+
+**Risk drives the gate (authority model):** **0-2** auto · **3-4** need `--yes` approval ·
+**5** needs `--yes` **and** `--signoff`, and its output is escalated for review by the
+`boundary` · **6** is prohibited (never runs autonomously). A specialist cannot be
+`--yes`'d through a professional boundary.
 
 An optional `action` names a vault side-effect: after the model produces its text, the
 action persists it. `write-checkpoint` appends the result to today's daily log (and leaves

@@ -17,7 +17,8 @@ from security.validate import InvalidInput, clean_request
 from . import audit
 from .actions import ActionContext, has_action, run_action
 from .model import ModelBackend, get_backend
-from .router import load_specialists, route
+from .registry import gate_for, load_registry, risk_of
+from .router import route
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,6 +34,8 @@ class Result:
     sources: list[str] = field(default_factory=list)
     approved: bool | None = None
     ran: bool = False
+    risk: int = 0
+    escalated: bool = False
     note: str = ""
 
 
@@ -55,6 +58,7 @@ def run(
     audit_dir=None,
     guard: Guard | None = None,
     action_root=None,
+    signoff: bool = False,
 ) -> Result:
     try:
         request = clean_request(request)
@@ -67,7 +71,7 @@ def run(
         except RateExceeded as exc:
             return Result(specialist=None, output="", note=f"rate limited: {exc}")
 
-    specialists = specialists if specialists is not None else load_specialists()
+    specialists = specialists if specialists is not None else load_registry()
     spec = route(request, specialists)
     if spec is None:
         names = ", ".join(s["name"] for s in specialists)
@@ -77,12 +81,18 @@ def run(
             note=f"no specialist matched; choose one of: {names}",
         )
 
-    high = bool(spec.get("high_stakes"))
-    if high and not approve:
+    risk = risk_of(spec)
+    gate = gate_for(risk)
+    boundary = spec.get("boundary") or "a qualified professional"
+    needs_approval = gate in ("approval", "professional")
+    approved_flag = True if needs_approval else None
+
+    if gate == "prohibited":
         audit.record(
-            "blocked-awaiting-approval",
+            "prohibited",
             spec["name"],
             [spec["job"]],
+            risk=risk,
             high_stakes=True,
             approved=False,
             audit_dir=audit_dir,
@@ -92,7 +102,48 @@ def run(
             output="",
             approved=False,
             ran=False,
-            note="high-stakes action requires approval (pass --yes / approve=True)",
+            risk=risk,
+            escalated=True,
+            note=f"prohibited (risk {risk}); requires multi-party authorisation via {boundary}",
+        )
+
+    if needs_approval and not approve:
+        audit.record(
+            "blocked-awaiting-approval",
+            spec["name"],
+            [spec["job"]],
+            risk=risk,
+            high_stakes=True,
+            approved=False,
+            audit_dir=audit_dir,
+        )
+        return Result(
+            specialist=spec["name"],
+            output="",
+            approved=False,
+            ran=False,
+            risk=risk,
+            note=f"risk {risk} requires approval (pass --yes / approve=True)",
+        )
+
+    if gate == "professional" and not signoff:
+        audit.record(
+            "blocked-awaiting-signoff",
+            spec["name"],
+            [spec["job"]],
+            risk=risk,
+            high_stakes=True,
+            approved=True,
+            audit_dir=audit_dir,
+        )
+        return Result(
+            specialist=spec["name"],
+            output="",
+            approved=True,
+            ran=False,
+            risk=risk,
+            escalated=True,
+            note=f"risk {risk}: requires professional sign-off by {boundary} (pass --signoff)",
         )
 
     system, sources = prime(spec, target_note)
@@ -106,7 +157,8 @@ def run(
             return Result(
                 specialist=spec["name"],
                 output="",
-                approved=(True if high else None),
+                approved=approved_flag,
+                risk=risk,
                 note=f"budget stop: {exc}",
             )
 
@@ -129,12 +181,16 @@ def run(
         sources = sources + result.written
         output = f"{output}\n\n({result.message})"
 
+    if gate == "professional":
+        output = f"[ESCALATED — draft for review by {boundary}; not final advice]\n{output}"
+
     audit.record(
         "ran",
         spec["name"],
         sources,
-        high_stakes=high,
-        approved=(True if high else None),
+        risk=risk,
+        high_stakes=(risk >= 3),
+        approved=approved_flag,
         output_preview=output,
         audit_dir=audit_dir,
     )
@@ -142,7 +198,9 @@ def run(
         specialist=spec["name"],
         output=output,
         sources=sources,
-        approved=(True if high else None),
+        approved=approved_flag,
         ran=True,
+        risk=risk,
+        escalated=(gate == "professional"),
         note=warn or "",
     )

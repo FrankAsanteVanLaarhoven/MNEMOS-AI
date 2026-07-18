@@ -11,6 +11,7 @@ import argparse
 from security.limits import Guard
 
 from .orchestrator import run
+from .registry import risk_of
 from .router import load_specialists
 
 
@@ -19,14 +20,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("request", nargs="*", help="what you want Mnemos to do")
     ap.add_argument("--note", help="target project note, e.g. vault/02-projects/EXAMPLE.md")
     ap.add_argument("--backend", default=None, help="stub | http")
-    ap.add_argument("--yes", action="store_true", help="pre-approve high-stakes actions")
+    ap.add_argument("--yes", action="store_true", help="approve risk 3-5 actions")
+    ap.add_argument("--signoff", action="store_true", help="professional sign-off for risk 5")
     ap.add_argument("--list", action="store_true", help="list specialists and exit")
     args = ap.parse_args(argv)
 
     if args.list:
         for s in load_specialists():
-            flag = "  [high-stakes]" if s.get("high_stakes") else ""
-            print(f"- {s['name']}: {s.get('description', '')}{flag}")
+            print(f"- {s['name']} (risk {risk_of(s)}): {s.get('description', '')}")
         return 0
 
     request = " ".join(args.request).strip()
@@ -38,15 +39,43 @@ def main(argv: list[str] | None = None) -> int:
     backend = get_backend(args.backend) if args.backend else None
     guard = Guard.from_env()
 
-    res = run(request, target_note=args.note, approve=args.yes, backend=backend, guard=guard)
+    res = run(
+        request,
+        target_note=args.note,
+        approve=args.yes,
+        signoff=args.signoff,
+        backend=backend,
+        guard=guard,
+    )
 
-    if res.specialist and res.approved is False and not res.ran and not args.yes:
-        ans = input(f"'{res.specialist}' is a high-stakes action. Proceed? [y/N] ").strip().lower()
+    if (
+        res.specialist
+        and res.approved is False
+        and not res.ran
+        and not res.escalated
+        and not args.yes
+    ):
+        ans = (
+            input(f"'{res.specialist}' is a risk {res.risk} action. Proceed? [y/N] ")
+            .strip()
+            .lower()
+        )
         if ans == "y":
-            res = run(request, target_note=args.note, approve=True, backend=backend, guard=guard)
+            res = run(
+                request,
+                target_note=args.note,
+                approve=True,
+                signoff=args.signoff,
+                backend=backend,
+                guard=guard,
+            )
         else:
             print("Aborted. (recorded in audit)")
             return 1
+
+    if res.escalated and not res.ran:
+        print(f"[escalated] {res.note}")
+        return 3
 
     if not res.specialist:
         print(res.note)
