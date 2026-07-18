@@ -14,8 +14,10 @@ parties is regulated (TCPA / GDPR / PECR) and is out of scope for a sovereign lo
 """
 
 from .base import Adapter, DeliveryResult, get, names, register, send
+from .integrations import register_integrations
 from .outbox import register_default
 
 register_default()
+register_integrations()
 
 __all__ = ["Adapter", "DeliveryResult", "get", "names", "register", "send"]

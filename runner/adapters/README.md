@@ -16,8 +16,17 @@ channels that reach other people.
 
 | Adapter | Risk | Third-party | What it does |
 |---|---|---|---|
-| `note`  | 2 | no  | appends a line to `outbox/notes.md` (local) |
-| `email` | 3 | yes | writes a **draft** to `outbox/email-*.md`, disclosure prepended, for you to review and send yourself — **it does not send** |
+| `note`   | 2 | no  | appends a line to `outbox/notes.md` (local) |
+| `email`  | 3 | yes | writes a **draft** to `outbox/email-*.md`, disclosure prepended, for you to review and send yourself — **it does not send** |
+| `notion` | 2 | no  | drafts a page body to `outbox/notion-*.md`, targeting `MNEMOS_NOTION_ACCOUNT` — **does not post** |
+| `slack`  | 3 | yes | drafts a message to `outbox/slack-*.md`, targeting `MNEMOS_SLACK_ACCOUNT`, disclosure prepended — **does not post** |
+| `gmail`  | 3 | yes | drafts an email to `outbox/gmail-*.md`, targeting `MNEMOS_GMAIL_ACCOUNT`, disclosure prepended — **does not send** |
+
+The `notion`/`slack`/`gmail` adapters are **draft-only**: they prepare content addressed to
+the account named in `MNEMOS_<CHANNEL>_ACCOUNT` (set locally, never committed) and never
+call an external API. **Live delivery needs that channel's API token** (Notion integration
+secret, a Slack access token, a Gmail credential) and is built once a real token is available
+against. Account identifiers and tokens live only in your gitignored `.env`.
 
 ## Deliberately NOT here
 
