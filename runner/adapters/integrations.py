@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.error
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
@@ -88,8 +89,11 @@ class NotionAdapter(Adapter):
             },
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=20) as r:
-            data = json.load(r)
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                data = json.load(r)
+        except urllib.error.HTTPError as exc:
+            raise RuntimeError(f"notion API {exc.code}: {exc.read().decode()[:300]}") from exc
         return data.get("url") or f"notion:page:{data.get('id')}"
 
 

@@ -61,6 +61,24 @@ def test_third_party_requires_disclosure():
         base._ADAPTERS.pop("bad-nodisc", None)
 
 
+def test_delivery_failure_is_caught(tmp_path):
+    from runner.adapters import base
+
+    class Boom(base.Adapter):
+        def __init__(self):
+            super().__init__("boom", risk=0)
+
+        def deliver(self, payload, *, root):
+            raise RuntimeError("kaboom")
+
+    base.register(Boom())
+    try:
+        r = base.send("boom", "hi", root=tmp_path, audit_dir=tmp_path)
+        assert not r.delivered and "delivery failed" in r.note and "kaboom" in r.note
+    finally:
+        base._ADAPTERS.pop("boom", None)
+
+
 def _run_all():
     import inspect
     import tempfile

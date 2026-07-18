@@ -96,7 +96,13 @@ def send(
         )
 
     body = f"{adapter.disclosure}\n\n{payload}" if adapter.third_party else payload
-    written = adapter.deliver(body, root=Path(root) if root else REPO_ROOT)
+    try:
+        written = adapter.deliver(body, root=Path(root) if root else REPO_ROOT)
+    except Exception as exc:
+        audit.record(
+            "adapter-failed", name, [], risk=adapter.risk, approved=False, audit_dir=audit_dir
+        )
+        return DeliveryResult(name, False, note=f"delivery failed: {exc}")
     audit.record(
         "adapter-delivered",
         name,
