@@ -159,15 +159,52 @@ class GmailAdapter(Adapter):
         return f"email:sent:{to}"
 
 
+class SlackAdapter(Adapter):
+    """Live to your own Slack when a webhook URL (MNEMOS_SLACK_WEBHOOK) or an access token
+    (MNEMOS_SLACK_TOKEN xox... + MNEMOS_SLACK_CHANNEL) is set; otherwise a local draft.
+    Risk 3, third-party, disclosed."""
+
+    def __init__(self):
+        super().__init__(
+            "slack", 3, third_party=True, disclosure="Posted via Mnemos, an automated assistant."
+        )
+
+    def deliver(self, payload: str, *, root: Path) -> list[str]:
+        webhook = os.environ.get("MNEMOS_SLACK_WEBHOOK")
+        token = os.environ.get("MNEMOS_SLACK_TOKEN")
+        channel = os.environ.get("MNEMOS_SLACK_CHANNEL")
+        if webhook and webhook.startswith("https://hooks.slack.com/"):
+            return [self._post_webhook(webhook, payload)]
+        if token and token.startswith("xox") and channel:
+            return [self._post_api(token, channel, payload)]
+        return _draft(self.name, payload, root, os.environ.get("MNEMOS_SLACK_ACCOUNT"))
+
+    def _post_webhook(self, url: str, text: str) -> str:  # pragma: no cover - network
+        req = urllib.request.Request(
+            url,
+            data=json.dumps({"text": text}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=20) as r:
+            r.read()
+        return "slack:webhook"
+
+    def _post_api(self, token: str, channel: str, text: str) -> str:  # pragma: no cover
+        req = urllib.request.Request(
+            "https://slack.com/api/chat.postMessage",
+            data=json.dumps({"channel": channel, "text": text}).encode(),
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = json.load(r)
+        if not data.get("ok"):
+            raise RuntimeError(f"slack API error: {data.get('error')}")
+        return f"slack:posted:{channel}"
+
+
 def register_integrations() -> None:
     register(NotionAdapter())
     register(GmailAdapter())
-    register(
-        DraftAdapter(
-            "slack",
-            3,
-            third_party=True,
-            disclosure="Posted via Mnemos, an automated assistant.",
-            account_env="MNEMOS_SLACK_ACCOUNT",
-        )
-    )
+    register(SlackAdapter())

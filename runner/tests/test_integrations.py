@@ -43,6 +43,19 @@ def test_slack_third_party_blocked_without_approval(tmp_path):
     assert not r.delivered and "approval" in r.note
 
 
+def test_slack_drafts_without_credentials(tmp_path):
+    saved = {k: os.environ.pop(k, None) for k in ("MNEMOS_SLACK_WEBHOOK", "MNEMOS_SLACK_TOKEN")}
+    try:
+        r = adapters.send("slack", "hello team", approve=True, root=tmp_path, audit_dir=tmp_path)
+        assert r.delivered
+        body = (tmp_path / r.written[0]).read_text()
+        assert "automated assistant" in body and "NOT sent/posted" in body
+    finally:
+        for k, v in saved.items():
+            if v is not None:
+                os.environ[k] = v
+
+
 def test_gmail_drafts_without_credentials(tmp_path):
     saved = os.environ.pop("MNEMOS_GMAIL_APP_PASSWORD", None)
     os.environ["MNEMOS_GMAIL_ACCOUNT"] = "me@example.com"
