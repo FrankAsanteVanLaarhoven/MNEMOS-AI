@@ -19,6 +19,7 @@ from .actions import ActionContext, has_action, run_action
 from .model import ModelBackend, get_backend
 from .registry import gate_for, load_registry, risk_of
 from .router import route
+from .verify import challenge
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -36,6 +37,7 @@ class Result:
     ran: bool = False
     risk: int = 0
     escalated: bool = False
+    verdict: str = ""
     note: str = ""
 
 
@@ -59,6 +61,7 @@ def run(
     guard: Guard | None = None,
     action_root=None,
     signoff: bool = False,
+    verifier_backend: ModelBackend | None = None,
 ) -> Result:
     try:
         request = clean_request(request)
@@ -167,6 +170,32 @@ def run(
     if guard is not None:
         guard.add_tokens(estimate_tokens(output))
 
+    verdict = ""
+    if spec.get("verify"):
+        checked = challenge(output, system, verifier_backend or backend)
+        verdict = checked.detail
+        audit.record(
+            "verify",
+            spec["name"],
+            sources,
+            risk=risk,
+            approved=approved_flag,
+            output_preview=checked.detail,
+            audit_dir=audit_dir,
+        )
+        if not checked.ok:
+            return Result(
+                specialist=spec["name"],
+                output=output,
+                sources=sources,
+                approved=approved_flag,
+                ran=True,
+                risk=risk,
+                escalated=True,
+                verdict=verdict,
+                note="verifier: unsupported claims — action skipped",
+            )
+
     action_name = spec.get("action")
     if has_action(action_name):
         result = run_action(
@@ -202,5 +231,6 @@ def run(
         ran=True,
         risk=risk,
         escalated=(gate == "professional"),
+        verdict=verdict,
         note=warn or "",
     )

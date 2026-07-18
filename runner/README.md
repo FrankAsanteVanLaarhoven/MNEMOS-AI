@@ -48,6 +48,11 @@ action persists it. `write-checkpoint` appends the result to today's daily log (
 a dated pointer in a `--note` project note). Actions are appends only, run **after** the
 high-stakes approval gate, and their written paths are recorded in the audit trail.
 
+An optional `verify: true` adds an **independent challenge pass**: a second model call
+judges whether the output is grounded in the primed sources *before* any action runs. If it
+finds unsupported claims, the action is **skipped** and the output is flagged — evidence
+before execution.
+
 ## Test
 
     python -m pytest runner/tests -q      # or: python runner/tests/test_runner.py
