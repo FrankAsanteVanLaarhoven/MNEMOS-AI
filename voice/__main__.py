@@ -23,6 +23,9 @@ from voice.loop import converse  # noqa: E402
 def main() -> int:
     ap = argparse.ArgumentParser(prog="mnemos-voice")
     ap.add_argument("--visualizer", action="store_true", help="serve the localhost visualizer")
+    ap.add_argument(
+        "--audio", action="store_true", help="microphone + speaker (needs MNEMOS_*_CMD)"
+    )
     args = ap.parse_args()
 
     viz = None
@@ -33,8 +36,17 @@ def main() -> int:
         viz = set_state
         print("Visualizer at http://127.0.0.1:8765")
 
-    print("Mnemos voice loop (type to talk; 'exit' to end).")
-    converse(backend=get_backend(), guard=Guard.from_env(), viz=viz)
+    stt = tts = None
+    if args.audio:
+        from voice.stt import MicCommandSTT
+        from voice.tts import CommandTTS
+
+        stt, tts = MicCommandSTT(), CommandTTS()
+        print("Mnemos voice loop (audio mode; say 'exit' to end).")
+    else:
+        print("Mnemos voice loop (type to talk; 'exit' to end).")
+
+    converse(stt, tts, backend=get_backend(), guard=Guard.from_env(), viz=viz)
     return 0
 
 

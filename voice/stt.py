@@ -57,3 +57,34 @@ class CommandSTT(SpeechToText):
             timeout=120,
         )
         return out.stdout.strip() or None
+
+
+class MicCommandSTT(SpeechToText):
+    """Record a turn from the microphone, then transcribe it. Both steps are external
+    commands, so Mnemos stays engine-neutral:
+      MNEMOS_MIC_CMD  records audio to the wav path given as its final argument
+      MNEMOS_STT_CMD  takes a wav path and prints the transcript to stdout
+    Silence yields an empty string (the loop continues); a recorder failure ends the loop.
+    """
+
+    def __init__(self):
+        self._mic = os.environ.get("MNEMOS_MIC_CMD")
+        self._stt = os.environ.get("MNEMOS_STT_CMD")
+        if not (self._mic and self._stt):
+            raise RuntimeError("MicCommandSTT needs env MNEMOS_MIC_CMD and MNEMOS_STT_CMD")
+
+    def listen(self) -> str | None:
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
+            wav = tmp.name
+            rec = subprocess.run(shlex.split(self._mic) + [wav], timeout=120)
+            if rec.returncode != 0:
+                return None
+            out = subprocess.run(
+                shlex.split(self._stt) + [wav],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            return out.stdout.strip()
