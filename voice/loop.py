@@ -23,11 +23,20 @@ def converse(
     backend=None,
     max_turns: int | None = None,
     audit_dir=None,
+    guard=None,
+    viz=None,
 ) -> TextToSpeech:
     stt = stt or TextSTT()
     tts = tts or TextTTS()
+
+    def state(s):
+        if viz is not None:
+            viz(s)
+
     turns = 0
+    state("idle")
     while max_turns is None or turns < max_turns:
+        state("listening")
         text = stt.listen()
         if text is None:
             break
@@ -35,22 +44,36 @@ def converse(
         if not text:
             continue
         if text.lower() in _STOP:
+            state("speaking")
             tts.say("Ending the session.")
             break
         turns += 1
-        res = run(text, backend=backend, audit_dir=audit_dir)
+        state("thinking")
+        res = run(text, backend=backend, audit_dir=audit_dir, guard=guard)
         if res.specialist is None:
+            state("speaking")
             tts.say(res.note)
+            state("idle")
             continue
         if res.approved is False and not res.ran:
+            state("speaking")
             tts.say(f"{res.specialist} is a high-stakes action. Say yes to proceed.")
+            state("listening")
             reply = (stt.listen() or "").strip().lower()
             if reply in _YES:
-                res = run(text, approve=True, backend=backend, audit_dir=audit_dir)
+                state("thinking")
+                res = run(text, approve=True, backend=backend, audit_dir=audit_dir, guard=guard)
             else:
+                state("speaking")
                 tts.say(f"Skipped {res.specialist}.")
+                state("idle")
                 continue
+        state("speaking")
         tts.say(res.output)
         if res.sources:
             tts.say("Sources: " + ", ".join(res.sources))
+        if res.note:
+            tts.say(res.note)
+        state("idle")
+    state("idle")
     return tts

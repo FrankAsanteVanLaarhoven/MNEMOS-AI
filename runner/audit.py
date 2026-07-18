@@ -11,6 +11,8 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+from security.secrets import redact
+
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_AUDIT_DIR = ROOT / "audit"
 
@@ -35,7 +37,7 @@ def record(
         "sources": sources,
         "high_stakes": high_stakes,
         "approved": approved,
-        "output_preview": output_preview[:200],
+        "output_preview": redact(output_preview)[:200],
     }
     path = audit_dir / (now.strftime("%Y-%m-%d") + ".jsonl")
     with path.open("a", encoding="utf-8") as f:

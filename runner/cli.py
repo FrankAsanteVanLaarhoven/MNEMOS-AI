@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import argparse
 
+from security.limits import Guard
+
 from .orchestrator import run
 from .router import load_specialists
 
@@ -34,13 +36,14 @@ def main(argv: list[str] | None = None) -> int:
     from .model import get_backend
 
     backend = get_backend(args.backend) if args.backend else None
+    guard = Guard.from_env()
 
-    res = run(request, target_note=args.note, approve=args.yes, backend=backend)
+    res = run(request, target_note=args.note, approve=args.yes, backend=backend, guard=guard)
 
     if res.specialist and res.approved is False and not res.ran and not args.yes:
         ans = input(f"'{res.specialist}' is a high-stakes action. Proceed? [y/N] ").strip().lower()
         if ans == "y":
-            res = run(request, target_note=args.note, approve=True, backend=backend)
+            res = run(request, target_note=args.note, approve=True, backend=backend, guard=guard)
         else:
             print("Aborted. (recorded in audit)")
             return 1
@@ -54,6 +57,8 @@ def main(argv: list[str] | None = None) -> int:
         print("\nEvidence:")
         for s in res.sources:
             print(f"  - {s}")
+    if res.note:
+        print(f"\n[{res.note}]")
     return 0
 
 

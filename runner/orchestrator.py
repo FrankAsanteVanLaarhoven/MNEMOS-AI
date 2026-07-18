@@ -7,8 +7,12 @@ action. High-stakes specialists require explicit approval before they run.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from security.limits import BudgetExceeded, Guard, RateExceeded, estimate_tokens
+from security.validate import InvalidInput, clean_request
 
 from . import audit
 from .model import ModelBackend, get_backend
@@ -48,7 +52,19 @@ def run(
     backend: ModelBackend | None = None,
     specialists: list[dict] | None = None,
     audit_dir=None,
+    guard: Guard | None = None,
 ) -> Result:
+    try:
+        request = clean_request(request)
+    except InvalidInput as exc:
+        return Result(specialist=None, output="", note=f"rejected input: {exc}")
+
+    if guard is not None:
+        try:
+            guard.check_rate(time.monotonic())
+        except RateExceeded as exc:
+            return Result(specialist=None, output="", note=f"rate limited: {exc}")
+
     specialists = specialists if specialists is not None else load_specialists()
     spec = route(request, specialists)
     if spec is None:
@@ -78,8 +94,24 @@ def run(
         )
 
     system, sources = prime(spec, target_note)
+
+    warn = None
+    if guard is not None:
+        guard.add_tokens(estimate_tokens(system) + estimate_tokens(request))
+        try:
+            warn = guard.check_budget()
+        except BudgetExceeded as exc:
+            return Result(
+                specialist=spec["name"],
+                output="",
+                approved=(True if high else None),
+                note=f"budget stop: {exc}",
+            )
+
     backend = backend or get_backend()
     output = backend.complete(system, request)
+    if guard is not None:
+        guard.add_tokens(estimate_tokens(output))
     audit.record(
         "ran",
         spec["name"],
@@ -95,4 +127,5 @@ def run(
         sources=sources,
         approved=(True if high else None),
         ran=True,
+        note=warn or "",
     )

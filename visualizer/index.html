@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mnemos</title>
+<style>
+  :root { --bg:#05070d; --fg:#8fb4c8; }
+  * { margin:0; box-sizing:border-box; }
+  html, body { height:100%; background:var(--bg); overflow:hidden; }
+  canvas { display:block; width:100vw; height:100vh; }
+  #hud {
+    position:fixed; left:0; right:0; bottom:24px; text-align:center;
+    font:600 13px/1.4 ui-monospace, Menlo, Consolas, monospace;
+    letter-spacing:.28em; text-transform:uppercase; color:var(--fg);
+    text-shadow:0 0 12px rgba(80,180,220,.5); pointer-events:none;
+  }
+  #hud small {
+    display:block; letter-spacing:.14em; opacity:.5; text-transform:none;
+    font-weight:400; margin-top:6px;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><span id="state">idle</span><small>mnemos · local</small></div>
+<script>
+const cv = document.getElementById('c'), x = cv.getContext('2d');
+const stateEl = document.getElementById('state');
+let W, H, DPR;
+function size() {
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  W = cv.width = innerWidth * DPR;
+  H = cv.height = innerHeight * DPR;
+}
+size(); addEventListener('resize', size);
+
+const PAL = {
+  idle:      { c:[90,170,210],  speed:0.6, amp:0.10 },
+  listening: { c:[70,150,255],  speed:1.4, amp:0.55 },
+  thinking:  { c:[190,140,255], speed:2.6, amp:0.35 },
+  speaking:  { c:[70,230,180],  speed:2.0, amp:0.90 },
+};
+let state = 'idle', level = 0, t = 0;
+function setState(s) { if (PAL[s]) { state = s; stateEl.textContent = s; } }
+window.mnemosSetState = setState;
+
+// live state via SSE when served locally; otherwise a demo cycle
+try {
+  const es = new EventSource('/events');
+  es.onmessage = e => { try { setState(JSON.parse(e.data).state); } catch (_) {} };
+  es.onerror = () => { es.close(); demo(); };
+} catch (_) { demo(); }
+function demo() {
+  const seq = ['idle','listening','thinking','speaking'];
+  let i = 0;
+  setInterval(() => setState(seq[i = (i + 1) % seq.length]), 2200);
+}
+
+function grid() {
+  x.save(); x.globalAlpha = 0.06; x.strokeStyle = '#3a6b86'; x.lineWidth = 1 * DPR;
+  const g = 64 * DPR;
+  for (let gx = 0; gx < W; gx += g) { x.beginPath(); x.moveTo(gx,0); x.lineTo(gx,H); x.stroke(); }
+  for (let gy = 0; gy < H; gy += g) { x.beginPath(); x.moveTo(0,gy); x.lineTo(W,gy); x.stroke(); }
+  x.restore();
+}
+
+function frame() {
+  t += 0.016;
+  const p = PAL[state], [r, g, b] = p.c;
+  const target = p.amp * (0.6 + 0.4 * Math.abs(Math.sin(t * p.speed * 2)));
+  level += (target - level) * 0.12;
+
+  x.clearRect(0,0,W,H);
+  x.fillStyle = 'rgba(5,7,13,.35)'; x.fillRect(0,0,W,H);
+  grid();
+
+  const cx = W/2, cy = H/2, R = Math.min(W,H) * 0.16;
+
+  for (let i = 0; i < 4; i++) {
+    const rr = R * (1 + i * 0.5) + Math.sin(t * p.speed + i) * 8 * DPR;
+    x.beginPath(); x.arc(cx, cy, rr, 0, 7);
+    x.strokeStyle = `rgba(${r},${g},${b},${0.12 - i * 0.02})`;
+    x.lineWidth = 1.5 * DPR; x.stroke();
+  }
+
+  const N = 96; x.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const a = i / N * Math.PI * 2;
+    const n = Math.sin(a * 6 + t * p.speed * 3) * 0.5 + Math.sin(a * 11 - t * p.speed * 2) * 0.5;
+    const rr = R * 0.72 + n * R * level;
+    const px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr;
+    i ? x.lineTo(px, py) : x.moveTo(px, py);
+  }
+  x.closePath();
+  x.strokeStyle = `rgba(${r},${g},${b},.9)`; x.lineWidth = 2 * DPR; x.stroke();
+  x.fillStyle = `rgba(${r},${g},${b},.06)`; x.fill();
+
+  const pr = R * (0.34 + level * 0.12);
+  const grd = x.createRadialGradient(cx, cy, 0, cx, cy, pr);
+  grd.addColorStop(0, `rgba(${r},${g},${b},.95)`);
+  grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  x.beginPath(); x.arc(cx, cy, pr, 0, 7); x.fillStyle = grd; x.fill();
+
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>
