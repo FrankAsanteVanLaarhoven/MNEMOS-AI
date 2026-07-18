@@ -18,15 +18,15 @@ channels that reach other people.
 |---|---|---|---|
 | `note`   | 2 | no  | appends a line to `outbox/notes.md` (local) |
 | `email`  | 3 | yes | writes a **draft** to `outbox/email-*.md`, disclosure prepended, for you to review and send yourself — **it does not send** |
-| `notion` | 2 | no  | drafts a page body to `outbox/notion-*.md`, targeting `MNEMOS_NOTION_ACCOUNT` — **does not post** |
+| `notion` | 3 | no  | **live**: creates a page via the Notion API when `MNEMOS_NOTION_TOKEN` + `MNEMOS_NOTION_PARENT_PAGE` are set (approval-gated); otherwise drafts to `outbox/notion-*.md` |
 | `slack`  | 3 | yes | drafts a message to `outbox/slack-*.md`, targeting `MNEMOS_SLACK_ACCOUNT`, disclosure prepended — **does not post** |
 | `gmail`  | 3 | yes | drafts an email to `outbox/gmail-*.md`, targeting `MNEMOS_GMAIL_ACCOUNT`, disclosure prepended — **does not send** |
 
-The `notion`/`slack`/`gmail` adapters are **draft-only**: they prepare content addressed to
-the account named in `MNEMOS_<CHANNEL>_ACCOUNT` (set locally, never committed) and never
-call an external API. **Live delivery needs that channel's API token** (Notion integration
-secret, a Slack access token, a Gmail credential) and is built once a real token is available
-against. Account identifiers and tokens live only in your gitignored `.env`.
+`notion` is **live** once `MNEMOS_NOTION_TOKEN` + `MNEMOS_NOTION_PARENT_PAGE` are set (a real
+page create via the Notion API, still approval-gated + audited); without them it drafts
+locally. `slack`/`gmail` stay **draft-only** — they prepare content addressed to the account
+named in `MNEMOS_<CHANNEL>_ACCOUNT` and never call an external API until their own token is
+built and verified. Account identifiers and tokens live only in your gitignored `.env`.
 
 ## Deliberately NOT here
 

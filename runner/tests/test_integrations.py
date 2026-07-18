@@ -1,6 +1,6 @@
-"""Tests for the draft-only integration adapters (Notion, Slack, Gmail).
+"""Tests for the integration adapters (draft path only; no network, no real accounts).
 
-No real accounts or tokens: these verify the governed draft behaviour only.
+The live Notion path (`_create_page`) is exercised manually against a real token, not here.
 Run:  python -m pytest runner/tests/test_integrations.py -q
 """
 
@@ -15,18 +15,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from runner import adapters  # noqa: E402
 
 
-def test_notion_drafts_locally_with_account(tmp_path):
+def test_notion_drafts_without_token(tmp_path):
+    # ensure the live path can't trigger even if a real .env was sourced
+    saved = {
+        k: os.environ.pop(k, None) for k in ("MNEMOS_NOTION_TOKEN", "MNEMOS_NOTION_PARENT_PAGE")
+    }
     os.environ["MNEMOS_NOTION_ACCOUNT"] = "me@example.com"
     try:
-        r = adapters.send("notion", "a page body", root=tmp_path, audit_dir=tmp_path)
+        r = adapters.send("notion", "a page body", approve=True, root=tmp_path, audit_dir=tmp_path)
         assert r.delivered
         body = (tmp_path / r.written[0]).read_text()
         assert "DRAFT for notion" in body
         assert "me@example.com" in body
         assert "NOT sent/posted" in body
-        assert "a page body" in body
     finally:
         os.environ.pop("MNEMOS_NOTION_ACCOUNT", None)
+        for k, v in saved.items():
+            if v is not None:
+                os.environ[k] = v
+
+
+def test_notion_needs_approval(tmp_path):
+    r = adapters.send("notion", "a page body", root=tmp_path, audit_dir=tmp_path)
+    assert not r.delivered and "approval" in r.note  # risk 3 -> gated
 
 
 def test_slack_third_party_blocked_without_approval(tmp_path):
